@@ -42,6 +42,14 @@ input BookInput {
     image: String
     link: String
 }
+type SavedBookInput {
+    bookId: ID!
+    authors: [String]
+    description: String
+    title: String
+    image: String
+    link: String
+}
 `;
 
 
