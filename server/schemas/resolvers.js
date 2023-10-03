@@ -1,34 +1,34 @@
 const { Book, User } = require('../models');
+const { signToken } = require('../utils/auth.js');
 
 const resolvers = {
     Query: {
         users: async () => {
             return User.find().populate('savedBooks');
         },
-        getSingleUser: async ({ user = null, params }, res) => {
-            const foundUser = await User.findOne({
-              $or: [{ _id: user ? user._id : params.id }, { username: params.username }],
-            });
+        getSingleUser: async ( parent, args, context) => {
+            const userData = await User.findOne({
+                _id: context.user._id
+            }).select("-__v -password");
+            return userData;
+
         
-            if (!foundUser) {
-              return res.status(400).json({ message: 'Cannot find a user with this id!' });
-            }
-        
-            res.json(foundUser);
           },    
     },
     Mutation: {
         createUser: async (parent, args) => {
-            const user = await Matchup.create(args);
-            return user; 
+            const user = await User.create(args);
+            const token = signToken(user);
+            return {token, user};
         },
-        login: async ({ body }, res) => {
-            const user = await User.findOne({ $or: [{ username: body.username }, { email: body.email }] });
+        login: async (parent, args) => {
+            const {username, email, password} = args;
+            const user = await User.findOne({ $or: [{ username: username }, { email: email }] });
             if (!user) {
               return res.status(400).json({ message: "Can't find this user" });
             }
         
-            const correctPw = await user.isCorrectPassword(body.password);
+            const correctPw = await user.isCorrectPassword(password);
         
             if (!correctPw) {
               return res.status(400).json({ message: 'Wrong password!' });
@@ -36,21 +36,26 @@ const resolvers = {
             const token = signToken(user);
             res.json({ token, user });
           },
-          saveBook: async ({ user, body }, res) => {
+          saveBook: async (parent, args, context) => {
+            const {username, email, bookData} = args;
+            const {user} = context;
             console.log(user);
             try {
               const updatedUser = await User.findOneAndUpdate(
                 { _id: user._id },
-                { $addToSet: { savedBooks: body } },
+                { $addToSet: { savedBooks: bookData } },
                 { new: true, runValidators: true }
               );
-              return res.json(updatedUser);
+              return(updatedUser);
             } catch (err) {
               console.log(err);
               return res.status(400).json(err);
             }
         },
-          deleteBook: async ({ user, params }, res) => {
+          deleteBook: async (parent, args, context) => {
+            const {bookId} = args;
+            const {user} = context;
+
             const updatedUser = await User.findOneAndUpdate(
               { _id: user._id },
               { $pull: { savedBooks: { bookId: params.bookId } } },
