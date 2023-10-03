@@ -22,4 +22,3 @@
     "nodemon": "^2.0.3"
   }
 }
-// 1) Start at server.js, 2) look at schemas(ALOT), playground graphql for queries(testing backend), 3) move to frontend. (use mini project for errrrthang)
